@@ -12,6 +12,6 @@ A lightweight text editor written in Luau
   themes
 
 ## Overview
-lit is a lightweight text editor written mostly in Luau — it aims to provide
+:fire: is a lightweight text editor written mostly in Luau — it aims to provide
 something practical, pretty, *small* and fast, implemented as simply as
 possible; easy to modify and extend, or to use without doing either.
