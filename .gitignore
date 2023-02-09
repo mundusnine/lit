@@ -1,0 +1,5 @@
+build
+.vscode
+Deployment/**
+!Deployment/data
+!Deployment/data/**
