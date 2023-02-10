@@ -214,7 +214,7 @@ void kr_tsp_set_font_size(int size) {
 	font_size = size;
 }
 
-void kr_tsp_draw_string(const char *text, float opacity, uint32_t color, float x, float y,
+int kr_tsp_draw_string(const char *text, float opacity, uint32_t color, float x, float y,
                         kr_matrix3x3_t transformation) {
 	kinc_g4_texture_t *tex = kr_ttf_get_texture(active_font, font_size);
 
@@ -239,9 +239,10 @@ void kr_tsp_draw_string(const char *text, float opacity, uint32_t color, float x
 			++buffer_index;
 		}
 	}
+	return xpos;
 }
 
-void kr_tsp_draw_characters(const int *text, int start, int length, float opacity, uint32_t color,
+int kr_tsp_draw_characters(const int *text, int start, int length, float opacity, uint32_t color,
                             float x, float y, kr_matrix3x3_t transformation) {
 	kinc_g4_texture_t *tex = kr_ttf_get_texture(active_font, font_size);
 
@@ -264,6 +265,7 @@ void kr_tsp_draw_characters(const int *text, int start, int length, float opacit
 			++buffer_index;
 		}
 	}
+	return xpos;
 }
 #endif
 

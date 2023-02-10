@@ -169,6 +169,9 @@ static inline bool prepare_font_load(kr_ttf_font_t *font, int size) {
 float kr_ttf_load(kr_ttf_font_t *font, int size) {
 	if (!prepare_font_load(font, size)) return;
 
+	stbtt_fontinfo info;
+	stbtt_InitFont(&info, font->blob, font->offset);
+
 	// create image
 	kr_ttf_image_t *img = &(font->images[font->m_images_len]);
 	font->m_images_len += 1;
@@ -177,6 +180,9 @@ float kr_ttf_load(kr_ttf_font_t *font, int size) {
 	stbtt_bakedchar *baked =
 	    (stbtt_bakedchar *)kr_malloc(kr_ttf_num_glyphs * sizeof(stbtt_bakedchar));
 	assert(baked != NULL);
+	 float s =
+    stbtt_ScaleForMappingEmToPixels(&info, 1) /
+    stbtt_ScaleForPixelHeight(&info, 1);
 	unsigned char *pixels = NULL;
 	int status = -1;
 	while (status <= 0) {
@@ -189,7 +195,7 @@ float kr_ttf_load(kr_ttf_font_t *font, int size) {
 		else
 			pixels = (unsigned char *)kr_realloc(pixels, width * height);
 		assert(pixels != NULL);
-		status = stbtt_BakeFontBitmapArr(font->blob, font->offset, (float)size, pixels, width,
+		status = stbtt_BakeFontBitmapArr(font->blob, font->offset, (float)size *s, pixels, width,
 		                                 height, kr_ttf_glyphs, kr_ttf_num_glyphs, baked);
 	}
 
@@ -212,9 +218,9 @@ float kr_ttf_load(kr_ttf_font_t *font, int size) {
 	baked['\t'].x1 = baked['\t'].x0;
   	baked['\n'].x1 = baked['\n'].x0;
 
-	stbtt_fontinfo info;
+	// stbtt_fontinfo info;
+	// stbtt_InitFont(&info, font->blob, font->offset);
 	int ascent, descent, line_gap;
-	stbtt_InitFont(&info, font->blob, font->offset);
 	stbtt_GetFontVMetrics(&info, &ascent, &descent, &line_gap);
 	float scale = stbtt_ScaleForMappingEmToPixels(&info, (float)size);
 	int scaled_ascent = ascent * scale + 0.5;
