@@ -166,7 +166,7 @@ static inline bool prepare_font_load(kr_ttf_font_t *font, int size) {
 	return true;
 }
 
-void kr_ttf_load(kr_ttf_font_t *font, int size) {
+float kr_ttf_load(kr_ttf_font_t *font, int size) {
 	if (!prepare_font_load(font, size)) return;
 
 	// create image
@@ -178,7 +178,6 @@ void kr_ttf_load(kr_ttf_font_t *font, int size) {
 	    (stbtt_bakedchar *)kr_malloc(kr_ttf_num_glyphs * sizeof(stbtt_bakedchar));
 	assert(baked != NULL);
 	unsigned char *pixels = NULL;
-
 	int status = -1;
 	while (status <= 0) {
 		if (height < width)
@@ -210,16 +209,23 @@ void kr_ttf_load(kr_ttf_font_t *font, int size) {
 	kr_free(pixels);
 	pixels = color_pixels;
 #endif
+	baked['\t'].x1 = baked['\t'].x0;
+  	baked['\n'].x1 = baked['\n'].x0;
 
 	stbtt_fontinfo info;
 	int ascent, descent, line_gap;
 	stbtt_InitFont(&info, font->blob, font->offset);
 	stbtt_GetFontVMetrics(&info, &ascent, &descent, &line_gap);
-	float scale = stbtt_ScaleForPixelHeight(&info, (float)size);
+	float scale = stbtt_ScaleForMappingEmToPixels(&info, (float)size);
+	int scaled_ascent = ascent * scale + 0.5;
+	for (int i = 0; i < kr_ttf_num_glyphs; i++) {
+		baked[i].yoff += scaled_ascent;
+		baked[i].xadvance = floor(baked[i].xadvance);
+	}
 	img->m_size = (float)size;
-	img->baseline = myround((float)ascent * scale);
-	img->descent = myround((float)descent * scale);
-	img->line_gap = myround((float)line_gap * scale);
+	img->baseline = (float)ascent * scale;
+	img->descent = (float)descent * scale;
+	img->line_gap =(float)line_gap * scale;
 	img->width = (float)width;
 	img->height = (float)height;
 	img->chars = baked;
@@ -231,6 +237,7 @@ void kr_ttf_load(kr_ttf_font_t *font, int size) {
 	kinc_g4_texture_init_from_image(img->tex, &fontimg);
 	kinc_image_destroy(&fontimg);
 	kr_free(pixels);
+	return scale;
 }
 
 void kr_ttf_load_baked_font(kr_ttf_font_t *font, kr_ttf_font_t *origin, int size,
@@ -312,7 +319,7 @@ bool kr_ttf_get_baked_quad(kr_ttf_font_t *font, int size, kr_ttf_aligned_quad_t 
 	if (char_index >= kr_ttf_num_glyphs) return false;
 	float ipw = 1.0f / (float)img->width;
 	float iph = 1.0f / (float)img->height;
-	stbtt_bakedchar b = img->chars[char_index];
+	stbtt_bakedchar b = img->chars[char_index & 0xff];
 	// if (b == NULL) return null;
 	int round_x = (int)(xpos + b.xoff + 0.5);
 	int round_y = (int)(ypos + b.yoff + 0.5);

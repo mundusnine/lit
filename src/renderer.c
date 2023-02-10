@@ -30,6 +30,7 @@ typedef struct {
 struct RenFont {
   kr_ttf_font_t* data;
   float size;
+  int height;
 };
 // typedef kr_ttf_font_t RenFont;
 
@@ -146,8 +147,13 @@ RenFont* ren_load_font(const char *filename, float size) {
     num_fonts++;
   }
 
-  kr_ttf_load(font->data,size);
+  float scale = kr_ttf_load(font->data,size);
   font->size = size;
+  for(int i = 0; i < font->data->m_images_len;++i){
+    if((int)font->data->images[i].m_size  == (int)font->size){
+      font->height = (font->data->images[i].baseline/ scale - font->data->images[i].descent / scale + font->data->images[i].line_gap / scale) * scale + 0.5;
+    }
+  }
 
   return font;
 
@@ -188,7 +194,7 @@ int ren_get_font_width(RenFont *font, const char *text) {
 
 
 int ren_get_font_height(RenFont *font) {
-  return kr_ttf_height(font->data,font->size);
+  return font->height;
 }
 
 void ren_begin_frame(void) {
@@ -206,7 +212,6 @@ void ren_end_frame(void) {
 void ren_draw_rect(RenRect rect, RenColor color) {
   kr_g2_set_color(color_to_uint(color));
   kr_g2_fill_rect(rect.x,rect.y,rect.width,rect.height);
-  kr_g2_disable_scissor();
 }
 
 
@@ -249,5 +254,5 @@ int ren_draw_text(RenFont *font, const char *text, int x, int y, RenColor color)
   ren_set_font_tab_width(font, ren_get_font_tab_width(font));
   kr_g2_set_color(color_to_uint(color));
   kr_g2_set_font(font->data, font->size);
-  return kr_g2_draw_string(text,x,y+clip.bottom);
+  return kr_g2_draw_string(text,x,y);
 }

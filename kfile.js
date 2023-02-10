@@ -4,6 +4,7 @@ await project.addProject('Kinc');
 
 project.icon = "./icon.png"
 
+project.addDefine('KR_FULL_RGBA_FONTS');
 project.addIncludeDir('src');
 project.addFiles('src/**','Shaders/**');
 //nfd

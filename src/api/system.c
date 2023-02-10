@@ -15,6 +15,9 @@
 #include "nfd.h"
 #ifdef _WIN32
   #include <windows.h>
+#else
+#include <limits.h>
+#include <stdlib.h>
 #endif
 
 bool in_foreground = true;

@@ -56,11 +56,14 @@ void kr_ttf_font_init(kr_ttf_font_t *font, const char *fontpath, int font_index)
 void kr_ttf_font_init_empty(kr_ttf_font_t *font);
 
 /// <summary>
+/// Returns the scale.
+/// </summary>
+/// <summary>
 /// Load a font with a given size.
 /// </summary>
 /// <param name="font">Pointer to your font object</param>
 /// <param name="size">Font height in pixel</param>
-void kr_ttf_load(kr_ttf_font_t *font, int size);
+float kr_ttf_load(kr_ttf_font_t *font, int size);
 
 /// <summary>
 /// Load a baked font from an existing, regular font.
