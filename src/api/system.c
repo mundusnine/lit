@@ -50,7 +50,7 @@ static const char* button_name(int button) {
   }
 }
 
-
+//SDL ref: https://github.com/libsdl-org/SDL/blob/SDL2/src/events/SDL_keyboard.c#L348
 static char* key_name(char *dst, int sym) {
 char* out = "";
 switch(sym){
