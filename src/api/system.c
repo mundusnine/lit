@@ -834,7 +834,7 @@ static void receive(char* text){
 static int f_get_clipboard(lua_State *L) {
   lua_rawget(L,1);
   temp_L = L;
-  kinc_copy_from_clipboard(receive);
+  // kinc_copy_from_clipboard(receive);
   // char *text = "";
   // if (!text) { return 0; }
   // lua_pushstring(L, text);

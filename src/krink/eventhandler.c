@@ -167,9 +167,9 @@ static void shutdown(void) {
 }
 
 void kr_evt_init(void) {
-	kinc_keyboard_set_key_up_callback(key_up);
-	kinc_keyboard_set_key_down_callback(key_down);
-	kinc_keyboard_set_key_press_callback(key_press);
+	kinc_keyboard_set_key_up_callback(key_up,NULL);
+	kinc_keyboard_set_key_down_callback(key_down,NULL);
+	kinc_keyboard_set_key_press_callback(key_press,NULL);
 
 #if defined(KORE_IOS) || defined(KORE_ANDROID)
 	kinc_surface_set_touch_start_callback(touch_start);
