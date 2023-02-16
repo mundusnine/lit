@@ -593,6 +593,7 @@ top:
       return 2;
 
     case KR_EVT_KEY_PRESS:
+      if(e.data.key_press.character == '\r') goto top;
       lua_pushstring(L, "textinput");
       buf[0] = e.data.key_press.character;
       buf[1] =0;

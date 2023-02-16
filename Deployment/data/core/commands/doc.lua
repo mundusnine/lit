@@ -289,7 +289,7 @@ local commands = {
       core.command_view:set_text(doc().filename)
     end
     core.command_view:enter("Save As", function(filename)
-      save(filename:gsub("\r",""))
+      save(filename)
     end, common.path_suggest)
   end,
 
