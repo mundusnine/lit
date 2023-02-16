@@ -1,4 +1,5 @@
 #include <kinc/system.h>
+#include <kinc/log.h>
 #include <kinc/window.h>
 #include <kinc/input/mouse.h>
 #include <kinc/input/keyboard.h>
@@ -72,8 +73,14 @@ case KINC_KEY_RETURN:
   out = "return";
   break;
 case KINC_KEY_SHIFT:
+  out = "left shift";
+  break;
 case KINC_KEY_CONTROL:
+  out = "left ctrl";
+  break;
 case KINC_KEY_ALT:
+  out = "left alt";
+  break;
 case KINC_KEY_PAUSE:
   out = "pause";
   break;
@@ -582,13 +589,14 @@ top:
 
     case KR_EVT_KEY_UP:
       lua_pushstring(L, "keyreleased");
-      lua_pushstring(L, key_name(buf, e.data.key.keycode));
+      lua_pushstring(L, key_name(buf,e.data.key.keycode));
       return 2;
 
     case KR_EVT_KEY_PRESS:
       lua_pushstring(L, "textinput");
-      char c = e.data.key_press.character;
-      lua_pushstring(L,&c);
+      buf[0] = e.data.key_press.character;
+      buf[1] =0;
+      lua_pushstring(L,buf);
       return 2;
 
     case KR_EVT_MOUSE_PRESS:
@@ -596,7 +604,7 @@ top:
       lua_pushstring(L, button_name(e.data.mouse_button.button));
       lua_pushnumber(L, e.data.mouse_button.x);
       lua_pushnumber(L, e.data.mouse_button.y);
-      lua_pushnumber(L, 1);//TODO: support double clicks
+      lua_pushnumber(L, 1);//@TODO(JSN): support double clicks
       return 5;
 
     case KR_EVT_MOUSE_RELEASE:
@@ -775,15 +783,15 @@ static int f_list_dir(lua_State *L) {
 
 #ifdef _WIN32
   #include <windows.h>
+  #define PATH_MAX 260
   #define realpath(x, y) _fullpath(y, x, MAX_PATH)
 #endif
-
 static int f_absolute_path(lua_State *L) {
   const char *path = luaL_checkstring(L, 1);
-  char *res = realpath(path, NULL);
-  if (!res) { return 0; }
+  char res[PATH_MAX] = {0};
+  realpath(path, res);
+  if (!res[0]) { return 0; }
   lua_pushstring(L, res);
-  free(res);
   return 1;
 }
 
