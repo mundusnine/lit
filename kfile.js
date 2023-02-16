@@ -1,12 +1,25 @@
+const renderer_type = "GPU";
 let project = new Project('lit');
 
 await project.addProject('Kinc');
 
 project.icon = "./icon.png"
 
-project.addDefine('KR_FULL_RGBA_FONTS');
 project.addIncludeDir('src');
 project.addFiles('src/**','Shaders/**');
+
+if(renderer_type === "GPU"){
+	project.addIncludeDir('src/gpu');
+	project.addExclude('src/cpu/renderer.c');
+	project.addExclude('src/cpu/renderer.h');
+	project.addExclude('src/cpu/rencache.c');
+	project.addExclude('src/cpu/rencache.h');
+}
+else {
+	project.addIncludeDir('src/cpu');
+	project.addExclude('src/gpu/renderer.c');
+	project.addExclude('src/gpu/renderer.h');
+}
 //nfd
     project.addIncludeDir("Libraries/nfd/include");
 	project.addFile('Libraries/nfd/nfd_common.c');

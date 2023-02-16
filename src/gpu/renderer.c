@@ -32,7 +32,6 @@ struct RenFont {
   float size;
   int height;
 };
-// typedef kr_ttf_font_t RenFont;
 
 static kinc_image_t surf;
 static struct { int left, top, right, bottom; } clip;
@@ -55,42 +54,16 @@ static void* check_alloc(void *ptr) {
 }
 
 
-// static const char* utf8_to_codepoint(const char *p, unsigned *dst) {
-//   unsigned res, n;
-//   switch (*p & 0xf0) {
-//     case 0xf0 :  res = *p & 0x07;  n = 3;  break;
-//     case 0xe0 :  res = *p & 0x0f;  n = 2;  break;
-//     case 0xd0 :
-//     case 0xc0 :  res = *p & 0x1f;  n = 1;  break;
-//     default   :  res = *p;         n = 0;  break;
-//   }
-//   while (n--) {
-//     res = (res << 6) | (*(++p) & 0x3f);
-//   }
-//   *dst = res;
-//   return p + 1;
-// }
-
-
 void ren_init(void) {
   kr_g2_init();
   int w = kinc_width();
   int h = kinc_height();
-  // void* image_mem = kr_malloc(w * h * 4);
-  // kinc_image_init(&surf,image_mem,w,h,KINC_IMAGE_FORMAT_BGRA32);
-  // ren_set_clip_rect( (RenRect) { 0, 0, w, h } );
 }
 
-void ren_update_rects(RenRect *rects, int count) {
-}
-
+void ren_update_rects(RenRect *rects, int count) {}
 
 void ren_set_clip_rect(RenRect rect) {
   kr_g2_scissor(rect.x,rect.y,rect.width,rect.height);
-  // clip.left   = rect.x;
-  // clip.top    = rect.y;
-  // clip.right  = rect.x + rect.width;
-  // clip.bottom = rect.y + rect.height;
 }
 
 void ren_pop_clip_rect(void) {
@@ -215,40 +188,7 @@ void ren_draw_rect(RenRect rect, RenColor color) {
 }
 
 
-void ren_draw_image(RenImage *image, RenRect *sub, int x, int y, RenColor color) {
-  // kr_g2_draw_scaled_sub_image()
-  // if (color.a == 0) { return; }
-
-  // /* clip */
-  // int n;
-  // if ((n = clip.left - x) > 0) { sub->width  -= n; sub->x += n; x += n; }
-  // if ((n = clip.top  - y) > 0) { sub->height -= n; sub->y += n; y += n; }
-  // if ((n = x + sub->width  - clip.right ) > 0) { sub->width  -= n; }
-  // if ((n = y + sub->height - clip.bottom) > 0) { sub->height -= n; }
-
-  // if (sub->width <= 0 || sub->height <= 0) {
-  //   return;
-  // }
-
-  // /* draw */
-  // // SDL_Surface *surf = SDL_GetWindowSurface(window);
-  // RenColor *s = image->pixels;
-  // RenColor *d = (RenColor*)kinc_image_get_pixels(&surf);
-  // s += sub->x + sub->y * image->width;
-  // d += x + y * surf.width;
-  // int sr = image->width - sub->width;
-  // int dr = surf.width - sub->width;
-
-  // for (int j = 0; j < sub->height; j++) {
-  //   for (int i = 0; i < sub->width; i++) {
-  //     *d = blend_pixel2(*d, *s, color);
-  //     d++;
-  //     s++;
-  //   }
-  //   d += dr;
-  //   s += sr;
-  // }
-}
+void ren_draw_image(RenImage *image, RenRect *sub, int x, int y, RenColor color) {}
 
 int ren_draw_text(RenFont *font, const char *text, int x, int y, RenColor color) {
   ren_set_font_tab_width(font, ren_get_font_tab_width(font));
