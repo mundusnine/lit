@@ -566,15 +566,14 @@ top:
       // }
       // goto top;
 
-    // case SDL_DROPFILE:
-    //   SDL_GetGlobalMouseState(&mx, &my);
-    //   SDL_GetWindowPosition(window, &wx, &wy);
-    //   lua_pushstring(L, "filedropped");
-    //   lua_pushstring(L, e.drop.file);
-    //   lua_pushnumber(L, mx - wx);
-    //   lua_pushnumber(L, my - wy);
-    //   SDL_free(e.drop.file);
-    //   return 4;
+    case KR_EVT_DROP_FILE:
+      int mx,my;
+      kinc_mouse_get_position(0,&mx,&my);
+      lua_pushstring(L, "filedropped");
+      lua_pushstring(L, e.data.drop.filename);
+      lua_pushnumber(L, mx);
+      lua_pushnumber(L, my);
+      return 4;
 
     case KR_EVT_BACKGROUND:
       in_foreground = false;
