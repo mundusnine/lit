@@ -27,12 +27,6 @@ typedef struct {
   stbtt_bakedchar glyphs[256];
 } GlyphSet;
 
-struct RenFont {
-  kr_ttf_font_t* data;
-  float size;
-  int height;
-};
-
 static kinc_image_t surf;
 static struct { int left, top, right, bottom; } clip;
 
@@ -106,6 +100,7 @@ RenFont* ren_load_font(const char *filename, float size) {
 
   /* init font */
   font = check_alloc(kr_malloc(sizeof(RenFont)));
+  strcpy(font->path,filename);
   bool found = false;
   for(int i =0; i < num_fonts;++i){
     if(strcmp(fonts[i].fname,filename) == 0){

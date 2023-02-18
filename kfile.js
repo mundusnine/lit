@@ -1,3 +1,13 @@
+
+const system = platform === Platform.Windows ? "win32" :
+platform === Platform.Linux   ? "linux" :
+platform === Platform.FreeBSD   ? "freebsd" :
+platform === Platform.OSX     ? "macos" :
+platform === Platform.Wasm    ? "wasm" :
+platform === Platform.Android ? "android" :
+platform === Platform.iOS     ? "ios" :
+								   "unknown";
+
 const renderer_type = "GPU";
 let project = new Project('lit');
 
@@ -24,10 +34,17 @@ else {
     project.addIncludeDir("Libraries/nfd/include");
 	project.addFile('Libraries/nfd/nfd_common.c');
 
-	if (platform === Platform.Windows) {
+	if (system === "win32") {
+		project.addExclude('src/api/dirmonitor/kqueue.c');
+		project.addExclude('src/api/dirmonitor/fsevents.c');
+		project.addExclude('src/api/dirmonitor/inotify.c');
+		
 		project.addFile('Libraries/nfd/nfd_win.cpp');
 	}
-	else if (platform === Platform.Linux) {
+	else if (system === "linux") {
+		project.addExclude('src/api/dirmonitor/kqueue.c');
+		project.addExclude('src/api/dirmonitor/fsevents.c');
+		project.addExclude('src/api/dirmonitor/win32.c');
 		let gtk = true;
 		if (gtk) {
 			project.addFile('Libraries/nfd/nfd_gtk.c');
@@ -50,9 +67,17 @@ else {
 			project.addFile('Libraries/nfd/nfd_zenity.c');
 		}
 	}
-	else {
+	else if(system === "macos" || system === "ios") {
+		project.addExclude('src/api/dirmonitor/kqueue.c');
+		project.addExclude('src/api/dirmonitor/win32.c');
+		project.addExclude('src/api/dirmonitor/inotify.c');
 		project.addFile('Libraries/nfd/nfd_cocoa.m');
-	}    
+	}
+	else if( system === "freebsd"){
+		project.addExclude('src/api/dirmonitor/win32.c');
+		project.addExclude('src/api/dirmonitor/fsevents.c');
+		project.addExclude('src/api/dirmonitor/inotify.c');
+	}  
 project.setDebugDir('Deployment');
 
 project.flatten();

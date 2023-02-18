@@ -9,12 +9,52 @@
 
 #ifdef _WIN32
   #include <windows.h>
-#elif __linux__
+#elif defined(__linux__)
   #include <unistd.h>
-#elif __APPLE__
+#elif defined(__APPLE__)
   #include <mach-o/dyld.h>
+#elif defined(__FreeBSD__)
+  #include <sys/sysctl.h>
 #endif
 
+#ifdef _WIN32
+#define LITE_OS_HOME "USERPROFILE"
+#define LITE_PATHSEP_PATTERN "\\\\"
+#define LITE_NONPATHSEP_PATTERN "[^\\\\]+"
+#else
+#define LITE_OS_HOME "HOME"
+#define LITE_PATHSEP_PATTERN "/"
+#define LITE_NONPATHSEP_PATTERN "[^/]+"
+#endif
+
+#ifndef LITE_ARCH_TUPLE
+  // https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=msvc-140
+  #if defined(__x86_64__) || defined(_M_AMD64) || defined(__MINGW64__)
+    #define ARCH_PROCESSOR "x86_64"
+  #elif defined(__i386__) || defined(_M_IX86) || defined(__MINGW32__)
+    #define ARCH_PROCESSOR "x86"
+  #elif defined(__aarch64__) || defined(_M_ARM64) || defined (_M_ARM64EC)
+    #define ARCH_PROCESSOR "aarch64"
+  #elif defined(__arm__) || defined(_M_ARM)
+    #define ARCH_PROCESSOR "arm"
+  #endif
+
+  #if _WIN32
+    #define ARCH_PLATFORM "windows"
+  #elif __linux__
+    #define ARCH_PLATFORM "linux"
+  #elif __FreeBSD__
+    #define ARCH_PLATFORM "freebsd"
+  #elif __APPLE__
+    #define ARCH_PLATFORM "darwin"
+  #endif
+
+  #if !defined(ARCH_PROCESSOR) || !defined(ARCH_PLATFORM)
+    #error "Please define -DLITE_ARCH_TUPLE."
+  #endif
+
+  #define LITE_ARCH_TUPLE ARCH_PROCESSOR "-" ARCH_PLATFORM
+#endif
 
 static double get_scale(void) {
   kinc_display_mode_t mode = kinc_display_current_mode(kinc_primary_display());
@@ -97,6 +137,9 @@ int kickstart(int argc, char **argv) {
   lua_pushstring(L, kinc_system_id());
   lua_setglobal(L, "PLATFORM");
 
+  lua_pushstring(L, LITE_ARCH_TUPLE);
+  lua_setglobal(L, "ARCH");
+
   lua_pushnumber(L, get_scale());
   lua_setglobal(L, "SCALE");
 
@@ -110,11 +153,9 @@ int kickstart(int argc, char **argv) {
 
   (void) luaL_dostring(L,
     "xpcall(function()\n"
-    "  SCALE = tonumber(os.getenv(\"LITE_SCALE\")) or SCALE\n"
-    "  PATHSEP = package.config:sub(1, 1)\n"
-    "  EXEDIR = EXEFILE:match(\"^(.+)[/\\\\].*$\")\n"
-    "  package.path = EXEDIR .. '/data/?.lua;' .. package.path\n"
-    "  package.path = EXEDIR .. '/data/?/init.lua;' .. package.path\n"
+    "  HOME = os.getenv('" LITE_OS_HOME "')\n"
+    "  local exedir = EXEFILE:match('^(.*)" LITE_PATHSEP_PATTERN LITE_NONPATHSEP_PATTERN "$')\n"
+    "  dofile(exedir .. '/data' .. '/core/start.lua')\n"
     "  kore = require('core')\n"
     "  kore.init()\n"
     "end, function(err)\n"

@@ -1,9 +1,10 @@
 require "core.strict"
 local common = require "core.common"
 local config = require "core.config"
-local style = require "core.style"
+local style = require "colors.default"
 local command
 local keymap
+local dirwatch
 local RootView
 local StatusView
 local CommandView
@@ -11,6 +12,8 @@ local Doc
 
 local core = {}
 
+print(USERDIR)
+print(DATADIR)
 
 local function project_scan_thread()
   local function diff_files(a, b)
@@ -80,6 +83,7 @@ function core.init()
   RootView = require "core.rootview"
   StatusView = require "core.statusview"
   CommandView = require "core.commandview"
+  dirwatch = require "core.dirwatch"
   Doc = require "core.doc"
 
   local project_dir = EXEDIR

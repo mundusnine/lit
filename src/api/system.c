@@ -13,12 +13,16 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include "api.h"
+#include "utfconv.h"
 #include "nfd.h"
 #ifdef _WIN32
   #include <windows.h>
 #else
 #include <limits.h>
 #include <stdlib.h>
+#endif
+#ifdef __linux__
+#include <sys/vfs.h>
 #endif
 
 bool in_foreground = true;
@@ -52,7 +56,7 @@ static const char* button_name(int button) {
 
 //SDL ref: https://github.com/libsdl-org/SDL/blob/SDL2/src/events/SDL_keyboard.c#L348
 static char* key_name(char *dst, int sym) {
-char* out = "";
+char* out = "unknown";
 switch(sym){
 case KINC_KEY_UNKNOWN :
   break;
@@ -480,6 +484,8 @@ case KINC_KEY_QUOTE:
   break;
 case KINC_KEY_META:
 case KINC_KEY_ALT_GR:
+  out = "right alt";
+  break;
 case KINC_KEY_WIN_ICO_HELP:
 case KINC_KEY_WIN_ICO_00:
 case KINC_KEY_WIN_ICO_CLEAR:
@@ -627,6 +633,42 @@ top:
       lua_pushnumber(L, -e.data.mouse_scroll.delta);
       return 2;
 
+    // Eventually support finger...
+    // case SDL_FINGERDOWN:
+    //   SDL_GetWindowSize(window_renderer.window, &w, &h);
+
+    //   lua_pushstring(L, "touchpressed");
+    //   lua_pushinteger(L, (lua_Integer)(e.tfinger.x * w));
+    //   lua_pushinteger(L, (lua_Integer)(e.tfinger.y * h));
+    //   lua_pushinteger(L, e.tfinger.fingerId);
+    //   return 4;
+
+    // case SDL_FINGERUP:
+    //   SDL_GetWindowSize(window_renderer.window, &w, &h);
+
+    //   lua_pushstring(L, "touchreleased");
+    //   lua_pushinteger(L, (lua_Integer)(e.tfinger.x * w));
+    //   lua_pushinteger(L, (lua_Integer)(e.tfinger.y * h));
+    //   lua_pushinteger(L, e.tfinger.fingerId);
+    //   return 4;
+
+    // case SDL_FINGERMOTION:
+    //   SDL_PumpEvents();
+    //   while (SDL_PeepEvents(&event_plus, 1, SDL_GETEVENT, SDL_FINGERMOTION, SDL_FINGERMOTION) > 0) {
+    //     e.tfinger.x = event_plus.tfinger.x;
+    //     e.tfinger.y = event_plus.tfinger.y;
+    //     e.tfinger.dx += event_plus.tfinger.dx;
+    //     e.tfinger.dy += event_plus.tfinger.dy;
+    //   }
+    //   SDL_GetWindowSize(window_renderer.window, &w, &h);
+
+    //   lua_pushstring(L, "touchmoved");
+    //   lua_pushinteger(L, (lua_Integer)(e.tfinger.x * w));
+    //   lua_pushinteger(L, (lua_Integer)(e.tfinger.y * h));
+    //   lua_pushinteger(L, (lua_Integer)(e.tfinger.dx * w));
+    //   lua_pushinteger(L, (lua_Integer)(e.tfinger.dy * h));
+    //   lua_pushinteger(L, e.tfinger.fingerId);
+    //   return 6;
     default:
       goto top;
   }
@@ -713,6 +755,58 @@ static int f_set_window_mode(lua_State *L) {
   return 0;
 }
 
+static int f_get_window_mode(lua_State *L) {
+  kinc_window_mode_t mode = kinc_window_get_mode(0);
+  if (mode == KINC_WINDOW_MODE_FULLSCREEN) {
+    lua_pushstring(L, "fullscreen");
+  } else if (mode == KINC_WINDOW_MODE_WINDOW) {
+    lua_pushstring(L, "minimized");
+  } else if (mode == KINC_WINDOW_MODE_EXCLUSIVE_FULLSCREEN) {
+    lua_pushstring(L, "maximized");
+  } else {
+    lua_pushstring(L, "normal");
+  }
+  return 1;
+}
+
+static int f_set_window_bordered(lua_State *L) {
+  int bordered = lua_toboolean(L, 1);
+  if(bordered){
+    kinc_window_change_features(0,KINC_WINDOW_FEATURE_MINIMIZABLE | KINC_WINDOW_FEATURE_RESIZEABLE | KINC_WINDOW_FEATURE_MAXIMIZABLE);
+  }
+  else{
+    kinc_window_change_features(0,KINC_WINDOW_FEATURE_BORDERLESS | KINC_WINDOW_FEATURE_MINIMIZABLE | KINC_WINDOW_FEATURE_RESIZEABLE | KINC_WINDOW_FEATURE_MAXIMIZABLE);
+  }
+  return 0;
+}
+
+static int f_get_window_size(lua_State *L) {
+  int x, y, w, h;
+  x = kinc_window_x(0);
+  y = kinc_window_y(0);
+  w = kinc_window_width(0);
+  h = kinc_window_height(0);
+  lua_pushinteger(L, w);
+  lua_pushinteger(L, h);
+  lua_pushinteger(L, x);
+  lua_pushinteger(L, y);
+  return 4;
+}
+
+
+static int f_set_window_size(lua_State *L) {
+  double w = luaL_checknumber(L, 1);
+  double h = luaL_checknumber(L, 2);
+  double x = luaL_checknumber(L, 3);
+  double y = luaL_checknumber(L, 4);
+  // SDL_SetWindowSize(window_renderer.window, w, h);
+  // SDL_SetWindowPosition(window_renderer.window, x, y);
+  // ren_resize_window(&window_renderer);
+  kinc_window_resize(0,w,h);
+  kinc_window_move(0,x,y);
+  return 0;
+}
+
 
 static int f_window_has_focus(lua_State *L) {
   lua_pushboolean(L, in_foreground);
@@ -752,6 +846,62 @@ static int f_chdir(lua_State *L) {
   int err = chdir(path);
   if (err) { luaL_error(L, "chdir() failed"); }
   return 0;
+}
+
+// removes an empty directory
+static int f_rmdir(lua_State *L) {
+  const char *path = luaL_checkstring(L, 1);
+
+#ifdef _WIN32
+  LPWSTR wpath = utfconv_utf8towc(path);
+  int deleted = RemoveDirectoryW(wpath);
+  free(wpath);
+  if (deleted > 0) {
+    lua_pushboolean(L, 1);
+  } else {
+    lua_pushboolean(L, 0);
+    push_win32_error(L, GetLastError());
+    return 2;
+  }
+#else
+  int deleted = remove(path);
+  if(deleted < 0) {
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, strerror(errno));
+
+    return 2;
+  } else {
+    lua_pushboolean(L, 1);
+  }
+#endif
+
+  return 1;
+}
+
+static int f_mkdir(lua_State *L) {
+  const char *path = luaL_checkstring(L, 1);
+
+#ifdef _WIN32
+  LPWSTR wpath = utfconv_utf8towc(path);
+  if (wpath == NULL) {
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, UTFCONV_ERROR_INVALID_CONVERSION);
+    return 2;
+  }
+
+  int err = _wmkdir(wpath);
+  free(wpath);
+#else
+  int err = mkdir(path, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+#endif
+  if (err < 0) {
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, strerror(errno));
+    return 2;
+  }
+
+  lua_pushboolean(L, 1);
+  return 1;
 }
 
 
@@ -826,6 +976,48 @@ static int f_get_file_info(lua_State *L) {
   return 1;
 }
 
+#if __linux__
+// https://man7.org/linux/man-pages/man2/statfs.2.html
+
+struct f_type_names {
+  uint32_t magic;
+  const char *name;
+};
+
+static struct f_type_names fs_names[] = {
+  { 0xef53,     "ext2/ext3" },
+  { 0x6969,     "nfs"       },
+  { 0x65735546, "fuse"      },
+  { 0x517b,     "smb"       },
+  { 0xfe534d42, "smb2"      },
+  { 0x52654973, "reiserfs"  },
+  { 0x01021994, "tmpfs"     },
+  { 0x858458f6, "ramfs"     },
+  { 0x5346544e, "ntfs"      },
+  { 0x0,        NULL        },
+};
+
+#endif
+
+static int f_get_fs_type(lua_State *L) {
+  #if __linux__
+    const char *path = luaL_checkstring(L, 1);
+    struct statfs buf;
+    int status = statfs(path, &buf);
+    if (status != 0) {
+      return luaL_error(L, "error calling statfs on %s", path);
+    }
+    for (int i = 0; fs_names[i].magic; i++) {
+      if (fs_names[i].magic == buf.f_type) {
+        lua_pushstring(L, fs_names[i].name);
+        return 1;
+      }
+    }
+  #endif
+  lua_pushstring(L, "unknown");
+  return 1;
+}
+
 static lua_State* temp_L = NULL;
 static void receive(char* text){
   lua_pushstring(temp_L, text);
@@ -849,6 +1041,14 @@ static int f_set_clipboard(lua_State *L) {
   return 0;
 }
 
+static int f_get_process_id(lua_State *L) {
+#ifdef _WIN32
+  lua_pushinteger(L, GetCurrentProcessId());
+#else
+  lua_pushinteger(L, getpid());
+#endif
+  return 1;
+}
 
 static int f_get_time(lua_State *L) {
   double n = kinc_time();
@@ -883,27 +1083,88 @@ static int f_exec(lua_State *L) {
 
 
 static int f_fuzzy_match(lua_State *L) {
-  const char *str = luaL_checkstring(L, 1);
-  const char *ptn = luaL_checkstring(L, 2);
-  int score = 0;
-  int run = 0;
-
-  while (*str && *ptn) {
-    while (*str == ' ') { str++; }
-    while (*ptn == ' ') { ptn++; }
-    if (tolower(*str) == tolower(*ptn)) {
-      score += run * 10 - (*str != *ptn);
+  size_t strLen, ptnLen;
+  const char *str = luaL_checklstring(L, 1, &strLen);
+  const char *ptn = luaL_checklstring(L, 2, &ptnLen);
+  // If true match things *backwards*. This allows for better matching on filenames than the above
+  // function. For example, in the lite project, opening "renderer" has lib/font_render/build.sh
+  // as the first result, rather than src/renderer.c. Clearly that's wrong.
+  bool files = lua_gettop(L) > 2 && lua_isboolean(L,3) && lua_toboolean(L, 3);
+  int score = 0, run = 0, increment = files ? -1 : 1;
+  const char* strTarget = files ? str + strLen - 1 : str;
+  const char* ptnTarget = files ? ptn + ptnLen - 1 : ptn;
+  while (strTarget >= str && ptnTarget >= ptn && *strTarget && *ptnTarget) {
+    while (strTarget >= str && *strTarget == ' ') { strTarget += increment; }
+    while (ptnTarget >= ptn && *ptnTarget == ' ') { ptnTarget += increment; }
+    if (tolower(*strTarget) == tolower(*ptnTarget)) {
+      score += run * 10 - (*strTarget != *ptnTarget);
       run++;
-      ptn++;
+      ptnTarget += increment;
     } else {
       score -= 10;
       run = 0;
     }
-    str++;
+    strTarget += increment;
   }
-  if (*ptn) { return 0; }
+  if (ptnTarget >= ptn && *ptnTarget) { return 0; }
+  lua_pushinteger(L, score - (int)strLen * 10);
+  return 1;
+}
 
-  lua_pushnumber(L, score - (int) strlen(str));
+#ifdef _WIN32
+#define PATHSEP '\\'
+#else
+#define PATHSEP '/'
+#endif
+
+/* Special purpose filepath compare function. Corresponds to the
+   order used in the TreeView view of the project's files. Returns true iff
+   path1 < path2 in the TreeView order. */
+static int f_path_compare(lua_State *L) {
+  const char *path1 = luaL_checkstring(L, 1);
+  const char *type1_s = luaL_checkstring(L, 2);
+  const char *path2 = luaL_checkstring(L, 3);
+  const char *type2_s = luaL_checkstring(L, 4);
+  const int len1 = strlen(path1), len2 = strlen(path2);
+  int type1 = strcmp(type1_s, "dir") != 0;
+  int type2 = strcmp(type2_s, "dir") != 0;
+  /* Find the index of the common part of the path. */
+  int offset = 0, i;
+  for (i = 0; i < len1 && i < len2; i++) {
+    if (path1[i] != path2[i]) break;
+    if (path1[i] == PATHSEP) {
+      offset = i + 1;
+    }
+  }
+  /* If a path separator is present in the name after the common part we consider
+     the entry like a directory. */
+  if (strchr(path1 + offset, PATHSEP)) {
+    type1 = 0;
+  }
+  if (strchr(path2 + offset, PATHSEP)) {
+    type2 = 0;
+  }
+  /* If types are different "dir" types comes before "file" types. */
+  if (type1 != type2) {
+    lua_pushboolean(L, type1 < type2);
+    return 1;
+  }
+  /* If types are the same compare the files' path alphabetically. */
+  int cfr = 0;
+  int len_min = (len1 < len2 ? len1 : len2);
+  for (int j = offset; j <= len_min; j++) {
+    if (path1[j] == path2[j]) continue;
+    if (path1[j] == 0 || path2[j] == 0) {
+      cfr = (path1[j] == 0);
+    } else if (path1[j] == PATHSEP || path2[j] == PATHSEP) {
+      /* For comparison we treat PATHSEP as if it was the string terminator. */
+      cfr = (path1[j] == PATHSEP);
+    } else {
+      cfr = (path1[j] < path2[j]);
+    }
+    break;
+  }
+  lua_pushboolean(L, cfr);
   return 1;
 }
 
@@ -914,18 +1175,27 @@ static const luaL_Reg lib[] = {
   { "set_cursor",          f_set_cursor          },
   { "set_window_title",    f_set_window_title    },
   { "set_window_mode",     f_set_window_mode     },
+  { "get_window_mode",     f_get_window_mode     },
+  { "set_window_bordered", f_set_window_bordered },
+  { "get_window_size",     f_get_window_size     },
+  { "set_window_size",     f_set_window_size     },
   { "window_has_focus",    f_window_has_focus    },
   { "show_confirm_dialog", f_show_confirm_dialog },
   { "chdir",               f_chdir               },
+  { "rmdir",               f_rmdir               },
+  { "mkdir",               f_mkdir               },
   { "list_dir",            f_list_dir            },
   { "absolute_path",       f_absolute_path       },
   { "get_file_info",       f_get_file_info       },
   { "get_clipboard",       f_get_clipboard       },
   { "set_clipboard",       f_set_clipboard       },
+  { "get_process_id",      f_get_process_id      },
   { "get_time",            f_get_time            },
   { "sleep",               f_sleep               },
   { "exec",                f_exec                },
   { "fuzzy_match",         f_fuzzy_match         },
+  { "path_compare",        f_path_compare        },
+  { "get_fs_type",         f_get_fs_type         },
   { NULL, NULL }
 };
 

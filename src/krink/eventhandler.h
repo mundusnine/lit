@@ -32,7 +32,8 @@ typedef enum kr_evt_event_type {
 	KR_EVT_RESUME,
 	KR_EVT_SHUTDOWN,
 	KR_EVT_WINDOW_SIZE_CHANGE,
-	KR_EVT_DROP_FILE
+	KR_EVT_DROP_FILE,
+	KR_EVT_DIR_EVT = 0xdeadbeaf
 } kr_evt_event_type_t;
 
 typedef struct kr_evt_key_event {
